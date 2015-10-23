@@ -69,6 +69,48 @@ public class GuestbookDao {
 		return list;
 	}
 
+	public List<GuestbookVo> getList(int page) {
+		List<GuestbookVo> list = new ArrayList<GuestbookVo>();
+
+		try {
+			// 1. Connection 가져오기
+			Connection connection = getconnection();
+
+			// 2. Statement 준비
+			String sql = "select * from(select rownum as r, A.* from(select no, name, message, to_char(reg_date, 'yyyy-mm-dd hh:mi:ss') from guestbook order by reg_date desc ) A ) where ?<=r and r<=?";
+			PreparedStatement pstmt = connection.prepareStatement(sql);
+
+			// 3. binding
+			pstmt.setInt(1, (page - 1) * 5 + 1);
+			pstmt.setInt(2, page * 5);
+			// 4. SQL문 실행
+			ResultSet rs = pstmt.executeQuery();
+
+			// 4. row 가져오기
+			while (rs.next()) {
+				Long no = rs.getLong(2);
+				String name = rs.getString(3);
+				String message = rs.getString(4);
+				String regDate = rs.getString(5);
+				GuestbookVo vo = new GuestbookVo();
+				vo.setNo(no);
+				vo.setName(name);
+				vo.setMessage(message);
+				vo.setRegDate(regDate);
+				list.add(vo);
+			}
+			// 5. 자원 정리
+			rs.close();
+			pstmt.close();
+			connection.close();
+
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			System.out.println("SQL 오류-" + e);
+		}
+		return list;
+	}
+
 	public void insert(GuestbookVo vo) {
 
 		try {
@@ -108,7 +150,7 @@ public class GuestbookDao {
 			// 3. binding
 			pstmt.setString(1, id);
 			pstmt.setString(2, password);
-			
+
 			// 4. query 실행
 			pstmt.executeUpdate();
 
