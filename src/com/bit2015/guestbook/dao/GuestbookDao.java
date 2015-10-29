@@ -39,20 +39,21 @@ public class GuestbookDao {
 			Statement stmt = connection.createStatement();
 
 			// 3. SQL문 실행
-			String sql = "select * from GUESTBOOK order by reg_date desc";
+			String sql = "   select no," + "          name,"
+					+ "          message,"
+					+ "          to_char( reg_date, 'yyyy-MM-dd hh:mi:ss' )"
+					+ "     from guestbook" + " order by reg_date desc";
 			ResultSet rs = stmt.executeQuery(sql);
 
 			// 4. row 가져오기
 			while (rs.next()) {
 				Long no = rs.getLong(1);
 				String name = rs.getString(2);
-				String password = rs.getString(3);
-				String message = rs.getString(4);
-				String regDate = rs.getString(5);
+				String message = rs.getString(3);
+				String regDate = rs.getString(4);
 				GuestbookVo vo = new GuestbookVo();
 				vo.setNo(no);
 				vo.setName(name);
-				vo.setPassword(password);
 				vo.setMessage(message);
 				vo.setRegDate(regDate);
 				list.add(vo);
@@ -67,6 +68,43 @@ public class GuestbookDao {
 			System.out.println("SQL 오류-" + e);
 		}
 		return list;
+	}
+
+	public GuestbookVo get(Long no) {
+		GuestbookVo vo = new GuestbookVo();
+		try {
+			// 1. Connection 가져오기
+			Connection connection = getconnection();
+
+			// 2. Statement 준비
+			String sql = "select no, name," + " message,"
+					+ " to_char( reg_date, 'yyyy-MM-dd hh:mi:ss' )"
+					+ " from guestbook where no=?";
+			PreparedStatement pstmt = connection.prepareStatement(sql);
+
+			// 3. binding
+			pstmt.setLong(1, no);
+
+			// 4. query 실행
+			ResultSet rs = pstmt.executeQuery();
+			if (rs.next()) {
+				no = rs.getLong(1);
+				String name = rs.getString(2);
+				String message = rs.getString(3);
+				String regDate = rs.getString(4);
+				vo.setNo(no);
+				vo.setName(name);
+				vo.setMessage(message);
+				vo.setRegDate(regDate);
+			}
+			// 5. 자원 정리
+			pstmt.close();
+			connection.close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			System.out.println("SQL 오류-" + e);
+		}
+		return vo;
 	}
 
 	public List<GuestbookVo> getList(int page) {
@@ -111,8 +149,8 @@ public class GuestbookDao {
 		return list;
 	}
 
-	public void insert(GuestbookVo vo) {
-
+	public Long insert(GuestbookVo vo) {
+		Long no = -1L;
 		try {
 			// 1. Connection 가져오기
 			Connection connection = getconnection();
@@ -131,14 +169,27 @@ public class GuestbookDao {
 
 			// 5. 자원 정리
 			pstmt.close();
+
+			// 6. sequence 가져오기
+
+			Statement stmt = connection.createStatement();
+			ResultSet rs = stmt
+					.executeQuery("select guestbook_seq.currval from dual");
+			if (rs.next()) {
+				no = rs.getLong(1);
+			}
+			rs.close();
+			stmt.close();
 			connection.close();
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			System.out.println("SQL 오류-" + e);
 		}
+		return no;
 	}
 
-	public void delete(String id, String password) {
+	public boolean delete(GuestbookVo vo) {
+		int countDeleted = 0;
 		try {
 			// 1. Connection 가져오기
 			Connection connection = getconnection();
@@ -148,11 +199,11 @@ public class GuestbookDao {
 			PreparedStatement pstmt = connection.prepareStatement(sql);
 
 			// 3. binding
-			pstmt.setString(1, id);
-			pstmt.setString(2, password);
+			pstmt.setLong(1, vo.getNo());
+			pstmt.setString(2, vo.getPassword());
 
 			// 4. query 실행
-			pstmt.executeUpdate();
+			countDeleted = pstmt.executeUpdate();
 
 			// 5. 자원 정리
 			pstmt.close();
@@ -161,5 +212,6 @@ public class GuestbookDao {
 			// TODO Auto-generated catch block
 			System.out.println("SQL 오류-" + e);
 		}
+		return countDeleted == 1;
 	}
 }
